@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FOLDER_NAME=$1
+FOLDER_NAME=$1;
 
 usage() {
   echo "Usage: $0 Folder Name"
@@ -135,7 +135,7 @@ yarn install > /dev/null 2>&1
 
 echo "Creating folder structure"
 
-mkdir -p src src/config src/routes src/lib/middleware src/lib/errors
+mkdir -p src src/config src/routes src/lib/middleware src/lib/errors 
 
 cat <<EOT >> ./src/index.ts
 import { config } from './config';
@@ -147,7 +147,7 @@ const HOST = config.host;
 
 
 app.listen(PORT, HOST, () => {
-    console.log(`Running on http://${HOST}:${PORT}`);
+    console.log(\`Running on http://${HOST}:${PORT}\`);
 });
 EOT
 
