@@ -3,7 +3,7 @@
 FOLDER_NAME=$1;
 
 usage() {
-  echo "Usage: $0 Folder Name"
+  echo "Usage: $0 <folder name>"
   exit 1
 }
 
@@ -13,9 +13,7 @@ then
   usage
 fi
 
-echo "Initializing git & npm"
-
-git init "$FOLDER_NAME" > /dev/null 2>&1
+git init "$FOLDER_NAME"
 
 cd "$FOLDER_NAME"
 
@@ -33,22 +31,8 @@ cat <<EOT >> package.json
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.17.1",
-    "express-async-errors": "^3.1.1",
-    "helmet": "^4.6.0",
-    "morgan": "^1.10.0"
-  },
-  "devDependencies": {
-    "@types/cors": "^2.8.10",
-    "@types/express": "^4.17.12",
-    "@types/morgan": "^1.9.2",
-    "@types/node": "^15.12.1",
-    "jest": "^27.0.4",
-    "ts-node-dev": "^1.1.6",
-    "typescript": "^4.3.2"
-  }
+  "dependencies": {},
+  "devDependencies": {}
 }
 EOT
 
@@ -128,11 +112,12 @@ cat <<EOT >> tsconfig.json
 }
 EOT
 
-echo "Installing dependancies"
+echo "Installing dependancies..."
 
-yarn install > /dev/null 2>&1
+yarn add cors express express-async-errors helmet morgan > /dev/null 2>&1
+yarn add --dev  @types/cors @types/express @types/morgan @types/node jest ts-node-dev typescript > /dev/null 2>&1
 
-echo "Creating folder structure"
+echo "Creating Boilerplate..."
 
 mkdir -p src src/config src/routes src/lib/middleware src/lib/errors 
 
@@ -264,3 +249,5 @@ export const errorHandler = (
 
 }
 EOT
+
+echo "Successfully Generated Expressjs Boilerplate, cd $FOLDER_NAME then, yarn dev to continue"
