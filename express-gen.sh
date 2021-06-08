@@ -46,7 +46,6 @@ cat <<EOT >> package.json
     "@types/morgan": "^1.9.2",
     "@types/node": "^15.12.1",
     "jest": "^27.0.4",
-    "nodemon": "^2.0.7",
     "ts-node-dev": "^1.1.6",
     "typescript": "^4.3.2"
   }
