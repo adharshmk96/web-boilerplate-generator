@@ -1,4 +1,4 @@
-# Nodejs Project gen
+# Nodejs Project Generator
 
 Simple shell scripts to generate boilerplates for nodejs projects with typescript
 
