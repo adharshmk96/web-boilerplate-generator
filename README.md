@@ -5,4 +5,4 @@ Simple shell scripts to generate boilerplates for nodejs projects with typescrip
 - express-gen.sh for Express boilerplate 
 - nextjs-gen.sh for Nextjs boilerplate 
 
-Usage <tech>.sh foldername
+Usage \<tech\>-gen.sh \<foldername\>
