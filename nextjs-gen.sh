@@ -24,22 +24,25 @@ git init .
 echo "Managing dependancies..."
 
 yarn > /dev/null 2>&1
-yarn add --dev @types/node tailwindcss@latest postcss@latest autoprefixer@latest > /dev/null 2>&1
+yarn add --dev @types/node tailwindcss@latest postcss@latest autoprefixer@latest @headlessui/react > /dev/null 2>&1
 
 npx tailwindcss init -p
 
 cat <<EOT >> ./tailwind.config.js
 module.exports = {
-  purge: ['./pages/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}'],
-  darkMode: false, // or 'media' or 'class'
-  theme: {
-    extend: {},
-  },
-  variants: {
-    extend: {},
-  },
-  plugins: [],
-}
+	purge: [
+		"./pages/**/*.{js,ts,jsx,tsx}",
+		"./components/**/*.{js,ts,jsx,tsx}",
+	],
+	darkMode: false, // or 'media' or 'class'
+	theme: {
+		extend: {},
+	},
+	variants: {
+		extend: {},
+	},
+	plugins: [],
+};
 EOT
 
 echo "Managing boilerplate..."
@@ -52,16 +55,6 @@ cat <<EOT >> ./styles/index.css
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-html {
-  overflow-x: hidden;
-  font-size: 62.5%;
-}
-body {
-  font-size: 1.6rem;
-}
-
-
 EOT
 
 cat <<EOT >> ./pages/_app.tsx
