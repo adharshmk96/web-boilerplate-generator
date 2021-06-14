@@ -1,21 +1,22 @@
 #!/bin/bash
 
 FOLDER_NAME=$1;
+DOCKER_MODE=$2;
 
 usage() {
   echo "Usage: $0 <folder name>"
   exit 1
 }
 
-if [ -z $FOLDER_NAME ]
-then
-  echo "Error: missing parameters."
-  usage
-fi
+initialize_git() {
 
 git init "$FOLDER_NAME"
 
 cd "$FOLDER_NAME"
+
+}
+
+generate_gitignore() {
 
 cat <<EOT >> .gitignore
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
@@ -44,6 +45,10 @@ yarn-error.log*
 .env.production.local
 
 EOT
+
+}
+
+generate_config_files() {
 
 cat <<EOT >> package.json
 { 
@@ -140,14 +145,19 @@ cat <<EOT >> tsconfig.json
 }
 EOT
 
-echo "Installing dependancies..."
+}
 
-yarn add cors express express-async-errors helmet morgan > /dev/null 2>&1
-yarn add --dev  @types/cors @types/express @types/morgan @types/node jest ts-node-dev typescript > /dev/null 2>&1
+generate_directories() {
+
+mkdir -p src src/config src/routes src/lib/middleware src/lib/errors 
+
+}
+
+generate_boilerplate() {
 
 echo "Creating Boilerplate..."
 
-mkdir -p src src/config src/routes src/lib/middleware src/lib/errors 
+generate_directories
 
 cat <<EOT >> ./src/index.ts
 import { config } from './config';
@@ -277,5 +287,30 @@ export const errorHandler = (
 
 }
 EOT
+}
+
+install_deps_locally() {
+echo "Installing dependancies..."
+
+yarn add cors express express-async-errors helmet morgan > /dev/null 2>&1
+yarn add --dev  @types/cors @types/express @types/morgan @types/node jest ts-node-dev typescript > /dev/null 2>&1
+
+}
+
+if [ -z $FOLDER_NAME ]
+then
+  echo "Error: missing parameters."
+  usage
+fi
+
+initialize_git
+
+generate_gitignore
+
+generate_config_files
+
+generate_boilerplate
+
+install_deps_locally
 
 echo "Successfully Generated Expressjs Boilerplate, cd $FOLDER_NAME then, yarn dev to continue"

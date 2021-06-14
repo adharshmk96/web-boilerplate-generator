@@ -7,19 +7,63 @@ usage() {
   exit 1
 }
 
-if [ -z $FOLDER_NAME ]
-then
-  echo "Error: missing parameters."
-  usage
-fi
+initialize_git() {
+
+git init "$FOLDER_NAME"
+cd "$FOLDER_NAME"
+
+}
+
+generate_gitignore() {
+cat <<EOT >> .gitignore
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vercel
+.vercel
+EOT
+}
+
+initialize_nextjs() {
 
 echo "Initializing Nextjs Project."
 
-npx create-next-app --typescript "$FOLDER_NAME" > /dev/null 2>&1
+npx create-next-app --typescript . > /dev/null 2>&1
 
-cd "$FOLDER_NAME"
+# cd "$FOLDER_NAME"
 
-git init .
+}
+
+install_deps_locally() {
 
 echo "Managing dependancies..."
 
@@ -28,22 +72,9 @@ yarn add --dev @types/node tailwindcss@latest postcss@latest autoprefixer@latest
 
 npx tailwindcss init -p
 
-cat <<EOT >> ./tailwind.config.js
-module.exports = {
-	purge: [
-		"./pages/**/*.{js,ts,jsx,tsx}",
-		"./components/**/*.{js,ts,jsx,tsx}",
-	],
-	darkMode: false, // or 'media' or 'class'
-	theme: {
-		extend: {},
-	},
-	variants: {
-		extend: {},
-	},
-	plugins: [],
-};
-EOT
+}
+
+generate_boilerplate() {
 
 echo "Managing boilerplate..."
 
@@ -51,11 +82,7 @@ rm -rf ./pages ./styles
 
 mkdir pages styles context
 
-cat <<EOT >> ./styles/index.css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-EOT
+# Configuring pages
 
 cat <<EOT >> ./pages/_app.tsx
 import { AppProps } from "next/dist/next-server/lib/router/router";
@@ -69,7 +96,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
 		<>
 			<ContextProvider pageProps={pageProps}>
 				<Head>
-					<title>Adharsh M</title>
+					<title>$FOLDER_NAME</title>
 
 					<meta
 						name="viewport"
@@ -141,5 +168,50 @@ const ContextProvider: FC<TContextProvider> = ({ pageProps, children }) => (
 
 export default ContextProvider;
 EOT
+
+# Tailwind setup
+
+cat <<EOT >> ./tailwind.config.js
+module.exports = {
+	purge: [
+		"./pages/**/*.{js,ts,jsx,tsx}",
+		"./components/**/*.{js,ts,jsx,tsx}",
+	],
+	darkMode: false, // or 'media' or 'class'
+	theme: {
+		extend: {},
+	},
+	variants: {
+		extend: {},
+	},
+	plugins: [],
+};
+EOT
+
+cat <<EOT >> ./styles/index.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+EOT
+
+}
+
+
+if [ -z $FOLDER_NAME ]
+then
+  echo "Error: missing parameters."
+  usage
+fi
+
+initialize_git
+
+generate_gitignore
+
+initialize_nextjs
+
+generate_boilerplate
+
+install_deps_locally
+
 
 echo "Setup complete, please cd $FOLDER_NAME and run yarn dev to continue."
