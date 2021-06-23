@@ -149,7 +149,7 @@ EOT
 
 generate_directories() {
 
-mkdir -p src src/config src/routes src/lib/middleware src/lib/errors 
+mkdir -p src src/config src/routes src/lib/middleware src/lib/errors src/schema
 
 }
 
@@ -198,11 +198,13 @@ EOT
 cat <<EOT >> ./src/app.ts 
 import cors from 'cors';
 import express from 'express';
+import { graphqlHTTP } from 'express-graphql';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { NotFoundError } from './lib/errors/notFound';
 import { errorHandler } from './lib/middleware/errorHandler';
 import { rootRouter } from './routes';
+import { GQLSchema } from './schema/schema';
 
 require('express-async-errors');
 
@@ -212,12 +214,47 @@ const app = express()
 
 // Middlewares
 const cors_middleware = cors();
-const helmet_middleware = helmet();
+const helmet_middleware = helmet({
+    /**
+     * Default helmet policy + own customizations - graphiql support
+     * https://helmetjs.github.io/
+     */
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: [
+                "'self'",
+                /** @by-us - adds graphiql support over helmet's default CSP */
+                "'unsafe-inline'",
+            ],
+            baseUri: ["'self'"],
+            blockAllMixedContent: [],
+            fontSrc: ["'self'", 'https:', 'data:'],
+            frameAncestors: ["'self'"],
+            imgSrc: ["'self'", 'data:'],
+            objectSrc: ["'none'"],
+            scriptSrc: [
+                "'self'",
+                /** @by-us - adds graphiql support over helmet's default CSP */
+                "'unsafe-inline'",
+                /** @by-us - adds graphiql support over helmet's default CSP */
+                "'unsafe-eval'",
+            ],
+            upgradeInsecureRequests: [],
+        },
+    },
+})
 const logger_middleware = morgan('combined')
 
 app.use(cors_middleware);
 app.use(helmet_middleware);
 app.use(logger_middleware);
+
+app.use("/graphql",
+    graphqlHTTP({
+        schema: GQLSchema,
+        graphiql: true,
+    }),
+)
 
 // Router
 app.use(rootRouter)
@@ -230,6 +267,30 @@ app.use('*', async (req, res) => {
 app.use(errorHandler)
 
 export { app };
+
+EOT
+
+cat <<EOT >> ./src/schema/schema.ts 
+import {
+    graphql, 
+    GraphQLSchema,
+    GraphQLObjectType,
+    GraphQLString
+} from 'graphql'
+
+export const GQLSchema = new GraphQLSchema({
+    query: new GraphQLObjectType({
+        name: "RootQueryType",
+        fields: {
+            hello: {
+                type: GraphQLString,
+                resolve() {
+                    return 'world'
+                }
+            }
+        }
+    })
+})
 EOT
 
 cat <<EOT >> ./src/lib/errors/http-error.ts
@@ -289,11 +350,10 @@ export const errorHandler = (
 EOT
 }
 
-
 install_deps_locally() {
 echo "Installing dependancies..."
 
-yarn add cors express express-async-errors helmet morgan > /dev/null 2>&1
+yarn add cors express express-async-errors helmet morgan graphql express-graphql > /dev/null 2>&1
 yarn add --dev  @types/cors @types/express @types/morgan @types/node jest ts-node-dev typescript > /dev/null 2>&1
 
 }

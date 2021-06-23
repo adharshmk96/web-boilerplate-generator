@@ -149,7 +149,7 @@ EOT
 
 generate_directories() {
 
-mkdir -p src src/config src/routes src/lib/middleware src/lib/errors 
+mkdir -p src src/schema src/config
 
 }
 
@@ -161,16 +161,25 @@ generate_directories
 
 cat <<EOT >> ./src/index.ts
 import { config } from './config';
-import { app } from './app';
+import { ApolloServer, gql } from 'apollo-server';
+import { typeDefs, resolvers } from './schema/schema';
 
 // Constants
 const PORT = config.port;
 const HOST = config.host;
 
+// The ApolloServer constructor requires two parameters: your schema
+// definition and your set of resolvers.
+const server = new ApolloServer({ typeDefs, resolvers });
 
-app.listen(PORT, HOST, () => {
-    console.log(\`Running on http://\${HOST}:\${PORT}\`);
+// The \`listen\` method launches a web server.
+server.listen({
+// "http://\${HOST}:\${PORT}"
+  port: \`\${PORT}\`
+}).then(({ url }) => {
+  console.log(\`🚀  Server ready at \${url}\`);
 });
+
 EOT
 
 cat <<EOT >> ./src/config/index.ts
@@ -182,119 +191,31 @@ const config = {
 export { config }
 EOT
 
-cat <<EOT >> ./src/routes/index.ts
-import express from 'express';
-const router = express.Router();
+cat <<EOT >> ./src/schema/schema.ts
+import { gql } from 'apollo-server';
+ 
+export const typeDefs = gql\`
+  type Query {
+    hello: String
+  }
+\`;
+ 
+export const resolvers = {
+  Query: {
+    hello: () => 'Hello world!',
+  },
+};
 
-router.use("/", (req, res) => {
-    res.status(200).json({
-        status: "OK?"
-    })
-})
-
-export { router as rootRouter };
 EOT
 
-cat <<EOT >> ./src/app.ts 
-import cors from 'cors';
-import express from 'express';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import { NotFoundError } from './lib/errors/notFound';
-import { errorHandler } from './lib/middleware/errorHandler';
-import { rootRouter } from './routes';
-
-require('express-async-errors');
-
-// Initialize express app
-const app = express()
-
-
-// Middlewares
-const cors_middleware = cors();
-const helmet_middleware = helmet();
-const logger_middleware = morgan('combined')
-
-app.use(cors_middleware);
-app.use(helmet_middleware);
-app.use(logger_middleware);
-
-// Router
-app.use(rootRouter)
-
-// Default Route handling
-app.use('*', async (req, res) => {
-    throw new NotFoundError();
-});
-
-app.use(errorHandler)
-
-export { app };
-EOT
-
-cat <<EOT >> ./src/lib/errors/http-error.ts
-export abstract class HttpError extends Error {
-	abstract statusCode: number;
-
-	constructor(message: string) {
-		super(message);
-		Object.setPrototypeOf(this, HttpError.prototype);
-	}
-
-	abstract serializeErrors(): { message: string; field?: string }[];
-}
-EOT
-
-cat <<EOT >> ./src/lib/errors/notFound.ts 
-import { HttpError } from './http-error';
-
-export class NotFoundError extends HttpError {
-	statusCode = 404;
-
-	constructor() {
-		super('Route not found');
-		Object.setPrototypeOf(this, NotFoundError.prototype);
-	}
-
-	serializeErrors() {
-		return [{ message: 'The requested route is not Found' }];
-	}
-}
-EOT
-
-cat <<EOT >> ./src/lib/middleware/errorHandler.ts
-import { NextFunction, Request, Response } from 'express';
-import { HttpError } from '../errors/http-error';
-
-export const errorHandler = (
-    err: Error,
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
-
-    if(err instanceof HttpError) {
-        return res.status(err.statusCode).send({
-            errors: err.serializeErrors()
-        })
-    }
-
-    console.error(err);
-
-    res.status(500).send({
-        errors: [{message: 'Something went wrong !'}]
-    })
-
-}
-EOT
 }
 
 
 install_deps_locally() {
 echo "Installing dependancies..."
 
-yarn add cors express express-async-errors helmet morgan > /dev/null 2>&1
-yarn add --dev  @types/cors @types/express @types/morgan @types/node jest ts-node-dev typescript > /dev/null 2>&1
+yarn add graphql apollo-server > /dev/null 2>&1
+yarn add --dev  @types/node jest ts-node-dev typescript > /dev/null 2>&1
 
 }
 
