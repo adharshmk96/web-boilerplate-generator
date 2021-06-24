@@ -149,7 +149,7 @@ EOT
 
 generate_directories() {
 
-mkdir -p src src/config src/routes src/lib/middleware src/lib/errors src/schema
+mkdir -p src src/config src/data src/lib/middleware src/lib/errors src/schema src/schema/entities/post
 
 }
 
@@ -173,6 +173,23 @@ app.listen(PORT, HOST, () => {
 });
 EOT
 
+cat <<EOT >> ./src/data/dummy.ts
+export const posts = [
+    {
+        id: 1,
+        text: "Post 1",
+        userId: 1
+    }
+]
+
+export const users = [
+    {
+        id: 1,
+        email: "user@email.com"
+    }
+]
+EOT
+
 cat <<EOT >> ./src/config/index.ts
 const config = {
     host : "0.0.0.0",
@@ -182,17 +199,83 @@ const config = {
 export { config }
 EOT
 
-cat <<EOT >> ./src/routes/index.ts
-import express from 'express';
-const router = express.Router();
+cat <<EOT >> ./src/schema/entities/post/typeDef.ts
+export const postTypeDef = `
+type Post {
+  id: ID!
+  text: String
+  userId: ID!
+}
 
-router.use("/", (req, res) => {
-    res.status(200).json({
-        status: "OK?"
-    })
+type Query {
+    posts: [Post]
+}
+`
+EOT
+
+cat <<EOT >> ./src/schema/entities/post/resolvers.ts
+import { posts } from '../../../data/dummy';
+
+export const postResolvers = {
+    Query: {
+        posts: () => posts
+    }
+}
+EOT
+
+cat <<EOT >> ./src/schema/entities/post/index.ts
+import { makeExecutableSchema } from 'graphql-tools';
+import { postResolvers } from './resolvers';
+import { postTypeDef } from './typeDef';
+
+export const postsSchema = makeExecutableSchema({
+    typeDefs: postTypeDef,
+    resolvers: postResolvers
+});
+EOT
+
+cat <<EOT >> ./src/schema/entities/user.ts
+import { makeExecutableSchema } from 'graphql-tools';
+import { users } from '../..//data/dummy';
+
+const typeDefs = `
+"""
+Type User man...
+"""
+type User {
+    id: ID!
+    email: String
+    posts: [Post]
+}
+
+type Query {
+    users: [User]
+}
+`
+
+const resolvers = {
+    Query: {
+        users: () => users
+    },
+}
+
+export const usersSchema = makeExecutableSchema({
+    typeDefs,
+    resolvers
+});
+EOT
+
+cat <<EOT >> ./src/schema/index.ts 
+import { stitchSchemas } from 'graphql-tools';
+import { postsSchema } from './entities/post';
+import { usersSchema } from './entities/user';
+
+export const schema = stitchSchemas({
+    subschemas: [
+        usersSchema,
+        postsSchema
+    ]
 })
-
-export { router as rootRouter };
 EOT
 
 cat <<EOT >> ./src/app.ts 
@@ -203,8 +286,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { NotFoundError } from './lib/errors/notFound';
 import { errorHandler } from './lib/middleware/errorHandler';
-import { rootRouter } from './routes';
-import { GQLSchema } from './schema/schema';
+import { schema } from './schema';
 
 require('express-async-errors');
 
@@ -251,13 +333,10 @@ app.use(logger_middleware);
 
 app.use("/graphql",
     graphqlHTTP({
-        schema: GQLSchema,
+        schema: schema,
         graphiql: true,
     }),
 )
-
-// Router
-app.use(rootRouter)
 
 // Default Route handling
 app.use('*', async (req, res) => {
@@ -270,28 +349,6 @@ export { app };
 
 EOT
 
-cat <<EOT >> ./src/schema/schema.ts 
-import {
-    graphql, 
-    GraphQLSchema,
-    GraphQLObjectType,
-    GraphQLString
-} from 'graphql'
-
-export const GQLSchema = new GraphQLSchema({
-    query: new GraphQLObjectType({
-        name: "RootQueryType",
-        fields: {
-            hello: {
-                type: GraphQLString,
-                resolve() {
-                    return 'world'
-                }
-            }
-        }
-    })
-})
-EOT
 
 cat <<EOT >> ./src/lib/errors/http-error.ts
 export abstract class HttpError extends Error {
@@ -353,7 +410,7 @@ EOT
 install_deps_locally() {
 echo "Installing dependancies..."
 
-yarn add cors express express-async-errors helmet morgan graphql express-graphql > /dev/null 2>&1
+yarn add cors express express-async-errors helmet morgan graphql express-graphql graphql-tools > /dev/null 2>&1
 yarn add --dev  @types/cors @types/express @types/morgan @types/node jest ts-node-dev typescript > /dev/null 2>&1
 
 }
