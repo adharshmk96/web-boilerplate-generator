@@ -149,7 +149,7 @@ EOT
 
 generate_directories() {
 
-mkdir -p src src/config src/data src/servers src/lib/middleware src/lib/errors src/schema src/schema/entities
+mkdir -p src src/config src/data src/servers src/lib/middleware src/lib/errors src/schema/entities
 
 }
 
@@ -178,7 +178,6 @@ cat <<EOT >> ./src/servers/express.ts
 import { ApolloServer } from 'apollo-server-express';
 import cors from 'cors';
 import express from 'express';
-import helmet from 'helmet';
 import morgan from 'morgan';
 import { typeDefs, resolvers } from '../schema'
 import { errorHandler } from '../lib/middleware/errorHandler';
@@ -237,8 +236,13 @@ cat <<EOT >> ./src/data/dummy.ts
 export const books = [
     {
         id: 1,
-        text: "Book 1",
+        title: "Book 1",
         user: 1
+    },
+    {
+        id: 2,
+        title: "Book 2",
+        user: 2
     }
 ]
 
@@ -246,6 +250,10 @@ export const authors = [
     {
         id: 1,
         email: "user@email.com"
+    },
+    {
+        id: 2,
+        email: "user2@email.com"
     }
 ]
 EOT
@@ -259,7 +267,7 @@ const config = {
 export { config }
 EOT
 
-cat <<EOT >> ./src/schema/entities/index.ts
+cat <<EOT >> ./src/schema/index.ts
 import { gql } from 'apollo-server-express';
 import { merge } from 'lodash';
 import { authorResolvers, authorTypeDef } from './entities/author';
@@ -305,6 +313,7 @@ import { authors, books } from '../../data/dummy';
 
 export const booksTypedef = \`
 type Book {
+    id: ID!
     title: String
     author: Author
 }
@@ -408,7 +417,7 @@ EOT
 install_deps_locally() {
 echo "Installing dependancies..."
 
-yarn add cors express express-async-errors helmet morgan graphql apollo-graphql-express lodash > /dev/null 2>&1
+yarn add cors express express-async-errors morgan graphql apollo-server-express lodash > /dev/null 2>&1
 yarn add --dev  @types/cors @types/express @types/morgan @types/node @types/lodash jest ts-node-dev typescript > /dev/null 2>&1
 
 }
