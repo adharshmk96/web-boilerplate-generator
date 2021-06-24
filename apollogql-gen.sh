@@ -149,7 +149,7 @@ EOT
 
 generate_directories() {
 
-mkdir -p src src/schema src/config
+mkdir -p src src/config src/data src/servers src/lib/middleware src/lib/errors src/schema src/schema/entities
 
 }
 
@@ -161,25 +161,93 @@ generate_directories
 
 cat <<EOT >> ./src/index.ts
 import { config } from './config';
-import { ApolloServer, gql } from 'apollo-server';
-import { typeDefs, resolvers } from './schema/schema';
+import { app } from './servers/express';
 
 // Constants
 const PORT = config.port;
 const HOST = config.host;
 
-// The ApolloServer constructor requires two parameters: your schema
-// definition and your set of resolvers.
-const server = new ApolloServer({ typeDefs, resolvers });
 
-// The \`listen\` method launches a web server.
-server.listen({
-// "http://\${HOST}:\${PORT}"
-  port: \`\${PORT}\`
-}).then(({ url }) => {
-  console.log(\`🚀  Server ready at \${url}\`);
+app.listen(PORT, HOST, () => {
+    console.log(\`Running on http://\${HOST}:\${PORT}\`);
 });
 
+EOT
+
+cat <<EOT >> ./src/servers/express.ts 
+import { ApolloServer } from 'apollo-server-express';
+import cors from 'cors';
+import express from 'express';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import { typeDefs, resolvers } from '../schema'
+import { errorHandler } from '../lib/middleware/errorHandler';
+import { NotFoundError } from '../lib/errors/notFound';
+
+require('express-async-errors');
+
+// Initialize express app
+const app = express()
+
+const graphQLPath = "/graphql"
+
+// Middlewares
+const cors_middleware = cors();
+const logger_middleware = morgan('combined')
+
+app.use(cors_middleware);
+app.use(logger_middleware);
+
+// Apollo Server setup
+const apolloServer = new ApolloServer({
+    introspection: true,
+    playground: true,
+    typeDefs,
+    resolvers
+});
+apolloServer.applyMiddleware({
+    app,
+    path: graphQLPath
+});
+
+
+// express-graphql library
+
+// import { graphqlHTTP } from 'express-graphql';
+
+// app.use("/graphql",
+//     graphqlHTTP({
+//         schema: typeDefs,
+//         graphiql: true,
+//     }),
+// )
+
+// Default Route handling
+app.use('*', async (req, res) => {
+    throw new NotFoundError();
+});
+
+app.use(errorHandler)
+
+export { app };
+
+EOT
+
+cat <<EOT >> ./src/data/dummy.ts
+export const books = [
+    {
+        id: 1,
+        text: "Book 1",
+        user: 1
+    }
+]
+
+export const authors = [
+    {
+        id: 1,
+        email: "user@email.com"
+    }
+]
 EOT
 
 cat <<EOT >> ./src/config/index.ts
@@ -191,31 +259,157 @@ const config = {
 export { config }
 EOT
 
-cat <<EOT >> ./src/schema/schema.ts
-import { gql } from 'apollo-server';
- 
-export const typeDefs = gql\`
-  type Query {
-    hello: String
-  }
-\`;
- 
-export const resolvers = {
-  Query: {
-    hello: () => 'Hello world!',
-  },
-};
+cat <<EOT >> ./src/schema/entities/index.ts
+import { gql } from 'apollo-server-express';
+import { merge } from 'lodash';
+import { authorResolvers, authorTypeDef } from './entities/author';
+import { bookResolvers, booksTypedef } from './entities/books';
 
+
+export const typeDefs = gql\`
+\${authorTypeDef}
+
+\${booksTypedef}
+
+type Query {
+    _empty: String
+}
+\`
+
+export const resolvers = merge(authorResolvers, bookResolvers)
+
+
+// TO use express-graphql,
+
+// import { makeExecutableSchema } from 'graphql-tools';
+// import { buildSchema } from 'graphql';
+
+// export const typeDefs = buildSchema(\`
+// \${authorTypeDef}
+
+// \${booksTypedef}
+
+// type Query {
+//     _empty: String
+// }
+// \`)
+
+// export const schema = makeExecutableSchema({
+//     typeDefs,
+//     resolvers
+// })
 EOT
 
+cat <<EOT >> ./src/schema/entities/books.ts
+import { authors, books } from '../../data/dummy';
+
+export const booksTypedef = \`
+type Book {
+    title: String
+    author: Author
 }
 
+extend type Query {
+    books: [Book]
+}
+\`;
+export const bookResolvers = {
+    Query: {
+        books: () => books
+    },
+    Book: {
+        author: (parent: any) => authors.find(author => author.id == parent.user)
+    }
+}
+EOT
+
+cat <<EOT >> ./src/schema/entities/author.ts
+import { authors, books } from '../../data/dummy';
+
+export const authorTypeDef = \`
+type Author {
+    id: ID!
+    email: String
+    books: [Book]
+}
+
+extend type Query {
+    authors: [Author]
+}
+\`;
+
+export const authorResolvers = {
+    Query: {
+        authors: () => authors
+    },
+    Author: {
+        books: (parent: any) => books.filter(book => book.user == parent.id)
+    }
+}
+EOT
+
+cat <<EOT >> ./src/lib/errors/http-error.ts
+export abstract class HttpError extends Error {
+	abstract statusCode: number;
+
+	constructor(message: string) {
+		super(message);
+		Object.setPrototypeOf(this, HttpError.prototype);
+	}
+
+	abstract serializeErrors(): { message: string; field?: string }[];
+}
+EOT
+
+cat <<EOT >> ./src/lib/errors/notFound.ts 
+import { HttpError } from './http-error';
+
+export class NotFoundError extends HttpError {
+	statusCode = 404;
+
+	constructor() {
+		super('Route not found');
+		Object.setPrototypeOf(this, NotFoundError.prototype);
+	}
+
+	serializeErrors() {
+		return [{ message: 'The requested route is not Found' }];
+	}
+}
+EOT
+
+cat <<EOT >> ./src/lib/middleware/errorHandler.ts
+import { NextFunction, Request, Response } from 'express';
+import { HttpError } from '../errors/http-error';
+
+export const errorHandler = (
+    err: Error,
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+
+    if(err instanceof HttpError) {
+        return res.status(err.statusCode).send({
+            errors: err.serializeErrors()
+        })
+    }
+
+    console.error(err);
+
+    res.status(500).send({
+        errors: [{message: 'Something went wrong !'}]
+    })
+
+}
+EOT
+}
 
 install_deps_locally() {
 echo "Installing dependancies..."
 
-yarn add graphql apollo-server > /dev/null 2>&1
-yarn add --dev  @types/node jest ts-node-dev typescript > /dev/null 2>&1
+yarn add cors express express-async-errors helmet morgan graphql apollo-graphql-express lodash > /dev/null 2>&1
+yarn add --dev  @types/cors @types/express @types/morgan @types/node @types/lodash jest ts-node-dev typescript > /dev/null 2>&1
 
 }
 
