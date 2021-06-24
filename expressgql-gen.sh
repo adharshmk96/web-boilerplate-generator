@@ -149,7 +149,7 @@ EOT
 
 generate_directories() {
 
-mkdir -p src src/config src/data src/lib/middleware src/lib/errors src/schema src/schema/entities/post
+mkdir -p src src/config src/data src/lib/middleware src/lib/errors src/schema src/schema/entities
 
 }
 
@@ -174,15 +174,15 @@ app.listen(PORT, HOST, () => {
 EOT
 
 cat <<EOT >> ./src/data/dummy.ts
-export const posts = [
+export const books = [
     {
         id: 1,
-        text: "Post 1",
-        userId: 1
+        text: "Book 1",
+        user: 1
     }
 ]
 
-export const users = [
+export const authors = [
     {
         id: 1,
         email: "user@email.com"
@@ -199,84 +199,81 @@ const config = {
 export { config }
 EOT
 
-cat <<EOT >> ./src/schema/entities/post/typeDef.ts
-export const postTypeDef = `
-type Post {
-  id: ID!
-  text: String
-  userId: ID!
-}
+cat <<EOT >> ./src/schema/entities/index.ts
+import { merge } from 'lodash';
 
+import { makeExecutableSchema } from 'graphql-tools';
+import { authorResolvers, authorTypeDef } from './entities/author';
+import { bookResolvers, booksTypedef } from './entities/books';
+
+const rootQuery = `
 type Query {
-    posts: [Post]
+    _empty: String
 }
+`
+
+export const schema = makeExecutableSchema({
+    typeDefs: [
+        rootQuery,
+        authorTypeDef,
+        booksTypedef
+    ],
+    resolvers: merge(
+        authorResolvers,
+        bookResolvers
+    )
+})
 `
 EOT
 
-cat <<EOT >> ./src/schema/entities/post/resolvers.ts
-import { posts } from '../../../data/dummy';
+cat <<EOT >> ./src/schema/entities/books.ts
+import { authors, books } from '../../data/dummy';
 
-export const postResolvers = {
+export const booksTypedef = `
+type Book {
+    title: String
+    author: Author
+}
+
+extend type Query {
+    books: [Book]
+}
+`;
+export const bookResolvers = {
     Query: {
-        posts: () => posts
+        books: () => books
+    },
+    Book: {
+        author: (parent: any) => authors.find(author => author.id == parent.user)
     }
 }
 EOT
 
-cat <<EOT >> ./src/schema/entities/post/index.ts
-import { makeExecutableSchema } from 'graphql-tools';
-import { postResolvers } from './resolvers';
-import { postTypeDef } from './typeDef';
+cat <<EOT >> ./src/schema/entities/author.ts
+import { authors, books } from '../../data/dummy';
 
-export const postsSchema = makeExecutableSchema({
-    typeDefs: postTypeDef,
-    resolvers: postResolvers
-});
-EOT
-
-cat <<EOT >> ./src/schema/entities/user.ts
-import { makeExecutableSchema } from 'graphql-tools';
-import { users } from '../..//data/dummy';
-
-const typeDefs = `
-"""
-Type User man...
-"""
-type User {
+export const authorTypeDef = `
+type Author {
     id: ID!
     email: String
-    posts: [Post]
+    books: [Book]
 }
 
-type Query {
-    users: [User]
+extend type Query {
+    authors: [Author]
 }
-`
+`;
 
-const resolvers = {
+export const authorResolvers = {
     Query: {
-        users: () => users
+        authors: () => authors
     },
+    Author: {
+        books: (parent: any) => books.filter(book => book.user == parent.id)
+    }
 }
-
-export const usersSchema = makeExecutableSchema({
-    typeDefs,
-    resolvers
-});
 EOT
 
-cat <<EOT >> ./src/schema/index.ts 
-import { stitchSchemas } from 'graphql-tools';
-import { postsSchema } from './entities/post';
-import { usersSchema } from './entities/user';
-
-export const schema = stitchSchemas({
-    subschemas: [
-        usersSchema,
-        postsSchema
-    ]
-})
-EOT
 
 cat <<EOT >> ./src/app.ts 
 import cors from 'cors';
@@ -410,8 +407,8 @@ EOT
 install_deps_locally() {
 echo "Installing dependancies..."
 
-yarn add cors express express-async-errors helmet morgan graphql express-graphql graphql-tools > /dev/null 2>&1
-yarn add --dev  @types/cors @types/express @types/morgan @types/node jest ts-node-dev typescript > /dev/null 2>&1
+yarn add cors express express-async-errors helmet morgan graphql express-graphql graphql-tools lodash > /dev/null 2>&1
+yarn add --dev  @types/cors @types/express @types/morgan @types/node @types/lodash jest ts-node-dev typescript > /dev/null 2>&1
 
 }
 
