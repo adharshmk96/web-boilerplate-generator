@@ -161,7 +161,7 @@ generate_directories
 
 cat <<EOT >> ./src/index.ts
 import { config } from './config';
-import { app } from './app';
+import { app } from './server/express';
 
 // Constants
 const PORT = config.port;
@@ -195,7 +195,7 @@ router.use("/", (req, res) => {
 export { router as rootRouter };
 EOT
 
-cat <<EOT >> ./src/app.ts 
+cat <<EOT >> ./src/server/express.ts 
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
