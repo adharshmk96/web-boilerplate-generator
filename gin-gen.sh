@@ -390,4 +390,4 @@ go mod init $PROJECT_NAME
 go mod tidy
 go mod vendor
 
-echo "Successfully Generated Gin Boilerplate, cd $PROJECT_NAME then, yarn dev to continue"
+echo "Successfully Generated Gin Boilerplate, cd $PROJECT_NAME then, go run main.go to continue..."
