@@ -57,7 +57,7 @@ initialize_nextjs() {
 
 echo "Initializing Nextjs Project."
 
-npx create-next-app --typescript . > /dev/null 2>&1
+npx create-next-app --typescript .
 
 # cd "$FOLDER_NAME"
 
