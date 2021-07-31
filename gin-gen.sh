@@ -362,7 +362,7 @@ FROM golang:buster
 RUN curl -fLo install.sh https://raw.githubusercontent.com/cosmtrek/air/master/install.sh \\
     && chmod +x install.sh && sh install.sh && cp ./bin/air /bin/air
 
-WORKDIR /gym-manager
+WORKDIR /$PROJECT_NAME
 
 COPY go.mod .
 RUN go mod download
