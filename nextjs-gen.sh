@@ -57,6 +57,8 @@ initialize_nextjs() {
 
 echo "Initializing Nextjs Project."
 
+npm i -g create-next-app
+
 npx create-next-app --typescript .
 
 # cd "$FOLDER_NAME"
@@ -68,20 +70,20 @@ install_deps_locally() {
 echo "Managing dependancies..."
 
 yarn > /dev/null 2>&1
+
+# Installing UI Libararies
 yarn add --dev @types/node tailwindcss@latest postcss@latest autoprefixer@latest @headlessui/react > /dev/null 2>&1
 
 npx tailwindcss init -p
 
+# Installing Testing Libraries
+yarn add --dev jest typescript ts-jest @types/jest @testing-library/react @testing-library/dom @testing-library/user-event @testing-library/jest-dom  > /dev/null 2>&1
+
+yarn ts-jest config:init
+
 }
 
-generate_boilerplate() {
-
-echo "Managing boilerplate..."
-
-rm -rf ./pages ./styles
-
-mkdir pages styles context
-
+pages_boilerplate() {
 # Configuring pages
 
 cat <<EOT >> ./pages/_app.tsx
@@ -152,6 +154,9 @@ const Home: NextPage<{}> = () => {
 
 export default Home
 EOT
+}
+
+context_boilerplate() {
 
 cat <<EOT >> ./context/index.tsx
 import { FC } from "react";
@@ -169,6 +174,9 @@ const ContextProvider: FC<TContextProvider> = ({ pageProps, children }) => (
 export default ContextProvider;
 EOT
 
+}
+
+style_boilerplate() {
 # Tailwind setup
 
 cat <<EOT >> ./tailwind.config.js
@@ -193,8 +201,52 @@ cat <<EOT >> ./styles/index.css
 @tailwind components;
 @tailwind utilities;
 EOT
+}
+
+
+config_boilerplate() {
+
+cat <<EOT >> jest.config.js
+/** @type {import('ts-jest/dist/types').InitialOptionsTsJest} */
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'jsdom',
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.jest.json',
+    },
+  },
+};
+EOT
+
+
+cat <<EOT >> tsconfig.jest.json
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "jsx": "react-jsx"
+    }
+}
+EOT
 
 }
+
+generate_boilerplate() {
+
+echo "Managing boilerplate..."
+
+rm -rf ./pages ./styles
+
+mkdir pages styles context components
+
+pages_boilerplate
+
+context_boilerplate
+
+style_boilerplate
+
+}
+
 
 
 if [ -z $FOLDER_NAME ]
@@ -212,6 +264,8 @@ initialize_nextjs
 generate_boilerplate
 
 install_deps_locally
+
+config_boilerplate
 
 
 echo "Setup complete, please cd $FOLDER_NAME and run yarn dev to continue."
