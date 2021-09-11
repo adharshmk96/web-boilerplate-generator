@@ -77,9 +77,9 @@ yarn add --dev @types/node tailwindcss@latest postcss@latest autoprefixer@latest
 npx tailwindcss init -p
 
 # Installing Testing Libraries
-yarn add --dev jest typescript ts-jest @types/jest @testing-library/react @testing-library/dom @testing-library/user-event @testing-library/jest-dom  > /dev/null 2>&1
+# yarn add --dev jest ts-jest @types/jest @testing-library/react @testing-library/dom @testing-library/user-event @testing-library/jest-dom  > /dev/null 2>&1
 
-yarn ts-jest config:init
+# yarn ts-jest config:init
 
 }
 
@@ -206,7 +206,13 @@ EOT
 
 config_boilerplate() {
 
-cat <<EOT >> jest.config.js
+mkdir jest
+
+cat <<EOT >> ./jest/jest.setup.ts
+import '@testing-library/jest-dom'
+EOT    
+
+cat <<EOT >> ./jest.config.js
 /** @type {import('ts-jest/dist/types').InitialOptionsTsJest} */
 module.exports = {
   preset: 'ts-jest',
@@ -216,6 +222,7 @@ module.exports = {
       tsconfig: 'tsconfig.jest.json',
     },
   },
+  setupFilesAfterEnv: ['./jest/jest.setup.ts']
 };
 EOT
 
@@ -265,7 +272,7 @@ generate_boilerplate
 
 install_deps_locally
 
-config_boilerplate
+# config_boilerplate
 
 
 echo "Setup complete, please cd $FOLDER_NAME and run yarn dev to continue."

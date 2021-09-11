@@ -149,7 +149,7 @@ EOT
 
 generate_directories() {
 
-mkdir -p src src/config src/routes src/lib/middleware src/lib/errors 
+mkdir -p src src/config src/routes src/server src/lib/middleware src/lib/errors 
 
 }
 
@@ -200,9 +200,9 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { NotFoundError } from './lib/errors/notFound';
-import { errorHandler } from './lib/middleware/errorHandler';
-import { rootRouter } from './routes';
+import { NotFoundError } from '../lib/errors/notFound';
+import { errorHandler } from '../lib/middleware/errorHandler';
+import { rootRouter } from '../routes';
 
 require('express-async-errors');
 
