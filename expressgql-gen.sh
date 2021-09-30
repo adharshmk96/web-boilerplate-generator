@@ -281,8 +281,6 @@ import express from 'express';
 import { graphqlHTTP } from 'express-graphql';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { NotFoundError } from './lib/errors/notFound';
-import { errorHandler } from './lib/middleware/errorHandler';
 import { schema } from './schema';
 
 require('express-async-errors');
@@ -335,73 +333,17 @@ app.use("/graphql",
     }),
 )
 
+
 // Default Route handling
 app.use('*', async (req, res) => {
-    throw new NotFoundError();
+  res.status(404).json({ error: 'Not found' });
 });
-
-app.use(errorHandler)
 
 export { app };
 
 EOT
 
 
-cat <<EOT >> ./src/lib/errors/http-error.ts
-export abstract class HttpError extends Error {
-	abstract statusCode: number;
-
-	constructor(message: string) {
-		super(message);
-		Object.setPrototypeOf(this, HttpError.prototype);
-	}
-
-	abstract serializeErrors(): { message: string; field?: string }[];
-}
-EOT
-
-cat <<EOT >> ./src/lib/errors/notFound.ts 
-import { HttpError } from './http-error';
-
-export class NotFoundError extends HttpError {
-	statusCode = 404;
-
-	constructor() {
-		super('Route not found');
-		Object.setPrototypeOf(this, NotFoundError.prototype);
-	}
-
-	serializeErrors() {
-		return [{ message: 'The requested route is not Found' }];
-	}
-}
-EOT
-
-cat <<EOT >> ./src/lib/middleware/errorHandler.ts
-import { NextFunction, Request, Response } from 'express';
-import { HttpError } from '../errors/http-error';
-
-export const errorHandler = (
-    err: Error,
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
-
-    if(err instanceof HttpError) {
-        return res.status(err.statusCode).send({
-            errors: err.serializeErrors()
-        })
-    }
-
-    console.error(err);
-
-    res.status(500).send({
-        errors: [{message: 'Something went wrong !'}]
-    })
-
-}
-EOT
 }
 
 install_deps_locally() {
